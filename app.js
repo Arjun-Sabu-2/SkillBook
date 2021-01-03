@@ -8,6 +8,10 @@ const mongoose = require('mongoose');
 const passport = require('passport');
 const passportLocalMongoose = require('passport-local-mongoose');
 const session = require('express-session');
+const GitHubStrategy = require('passport-github').Strategy;
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const findOrCreate = require('mongoose-findorcreate');
+
 
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
@@ -33,17 +37,74 @@ const userSchema = new mongoose.Schema({
 });
 
 userSchema.plugin(passportLocalMongoose);
+userSchema.plugin(findOrCreate);
 
 const User = new mongoose.model('User', userSchema);
 
 passport.use(User.createStrategy());
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
+passport.serializeUser(function(user, done) {
+  done(null, user.id);
+});
+
+passport.deserializeUser(function(id, done) {
+  User.findById(id, function(err, user) {
+    done(err, user);
+  });
+});
+
+passport.use(new GitHubStrategy({
+    clientID: process.env.GIT_CLIENT_ID,
+    clientSecret: process.env.GIT_CLIENT_SECRET,
+    // callbackURL: "http://localhost:3000/auth/github/topSkills"
+    callbackURL:"https://mysterious-island-25455.herokuapp.com/auth/github/topSkills"
+  },
+  function(accessToken, refreshToken, profile, cb) {
+    User.findOrCreate({ username: profile.id }, function (err, user) {
+      return cb(err, user);
+    });
+  }
+));
+
+passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    // callbackURL: "http://localhost:3000/auth/google/topSkills"
+    callbackURL:"https://mysterious-island-25455.herokuapp.com/auth/google/topSkills"
+  },
+  function(accessToken, refreshToken, profile, cb) {
+    User.findOrCreate({ username: profile.id }, function (err, user) {
+      return cb(err, user);
+    });
+  }
+));
 
 //routes
 app.get('/', function(req, res){
   res.render('home');
 });
+
+
+app.get('/auth/github',
+  passport.authenticate('github'));
+
+app.get('/auth/github/topSkills',
+  passport.authenticate('github', { failureRedirect: '/login' }),
+  function(req, res) {
+    // Successful authentication, redirect home.
+    res.redirect('/topSkills');
+  });
+
+
+
+app.get('/auth/google',
+  passport.authenticate('google', { scope: ['profile'] }));
+
+app.get('/auth/google/topSkills',
+  passport.authenticate('google', { failureRedirect: '/login' }),
+  function(req, res) {
+    // Successful authentication, redirect home.
+    res.redirect('/topSkills');
+  });
 
 app.get('/register', function(req,res){
   res.render('register');

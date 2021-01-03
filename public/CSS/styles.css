@@ -38,7 +38,7 @@ a{
   font-size: 1.3rem;
 }
 
-.BottomBox a:hover{
+a:hover{
   background-color: white;
   color:black;
   border: 1px solid black;
@@ -79,4 +79,12 @@ input{
 
 input:focus{
   outline:none;
+}
+
+.divider{
+  height: 2px;
+  background-color: black;
+  width: 300px;
+  border: none;
+  margin: 20px 0 0;
 }
